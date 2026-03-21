@@ -211,10 +211,46 @@ Narzędzie do testowania Modbus TCP — tryb Master i Slave, konfiguracja przez 
 | GND     | GND     | Masa |
 | VCC     | 3.3V    | Zasilanie |
 
+---
+
+## Plan etapów
+
+- [x] Etap 1 — Modbus TCP Client, obsługa Coils
+- [x] Etap 2 — OLED hello world
+- [ ] Etap 3 — Enkoder, odczyt obrotów i przycisku
+- [ ] Etap 4 — Menu nawigacja OLED + enkoder
+- [ ] Etap 5 — Konfiguracja IP, Port, Slave ID przez menu
+- [ ] Etap 6 — Integracja konfiguracji z Modbusem
+- [ ] Etap 7 — Tryb Slave
+
+---
 
 ## Etap 2 — OLED
 
-> *do uzupełnienia*
+Moduł `src/display/` obsługuje wyświetlacz SSD1306 przez SPI (HSPI).
+
+> **Ważne:** OLED musi być inicjalizowany przed Ethernetem (W5500) — oba używają SPI i W5500 blokuje magistralę jeśli wystartuje pierwszy.
+
+```mermaid
+flowchart TD
+    A["inicjalizujDisplay()"]:::blue --> B{"display.begin<br/>SSD1306_SWITCHCAPVCC"}:::purple
+    B -- nie --> C["Serial: BLAD<br/>return false"]:::red
+    B -- tak --> D["clearDisplay()<br/>setTextSize(1)<br/>setTextColor(WHITE)"]:::teal
+    D --> E["Serial: OK<br/>return true"]:::green
+
+    F["pokazTekst(linia1, linia2)"]:::blue --> G["clearDisplay()"]:::teal
+    G --> H["setCursor(0,0)<br/>println(linia1)"]:::teal
+    H --> I{"linia2?"}:::purple
+    I -- tak --> J["println(linia2)"]:::teal
+    I -- nie --> K["display()"]:::teal
+    J --> K
+
+    classDef blue fill:#E6F1FB,stroke:#185FA5,color:#0C447C
+    classDef purple fill:#EEEDFE,stroke:#534AB7,color:#3C3489
+    classDef green fill:#EAF3DE,stroke:#3B6D11,color:#27500A
+    classDef teal fill:#E1F5EE,stroke:#0F6E56,color:#085041
+    classDef red fill:#FCEBEB,stroke:#A32D2D,color:#791F1F
+```
 
 ---
 
