@@ -3,6 +3,7 @@
 #include <Ethernet.h>
 #include "network/ethernet.h"
 #include "app/app.h"
+#include "display/display.h"
 
 byte mac[]       = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 IPAddress ip(192, 168, 1, 100);
@@ -12,7 +13,12 @@ uint16_t transID = 0;
 
 void setup() {
   Serial.begin(115200);
-  if (!inicjalizujEthernet()) {
+
+  inicjalizujDisplay();        // ← najpierw OLED
+  pokazTekst("Modbus Tester", "v1.0");
+
+  if (!inicjalizujEthernet()) { // ← potem Ethernet
+    pokazTekst("BLAD", "W5500!");
     while (true) delay(1000);
   }
 }
