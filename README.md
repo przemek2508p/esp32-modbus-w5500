@@ -208,8 +208,8 @@ Narzędzie do testowania Modbus TCP — tryb Master i Slave, konfiguracja przez 
 | CLK     | GPIO 32 | Obrót A |
 | DT      | GPIO 33 | Obrót B |
 | SW      | GPIO 25 | Przycisk |
+| +       | 3.3V    | Zasilanie |
 | GND     | GND     | Masa |
-| VCC     | 3.3V    | Zasilanie |
 
 ---
 
