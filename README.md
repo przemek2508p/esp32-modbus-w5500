@@ -217,7 +217,7 @@ Narzędzie do testowania Modbus TCP — tryb Master i Slave, konfiguracja przez 
 
 - [x] Etap 1 — Modbus TCP Client, obsługa Coils
 - [x] Etap 2 — OLED hello world
-- [ ] Etap 3 — Enkoder, odczyt obrotów i przycisku
+- [x] Etap 3 — Enkoder, odczyt obrotów i przycisku
 - [ ] Etap 4 — Menu nawigacja OLED + enkoder
 - [ ] Etap 5 — Konfiguracja IP, Port, Slave ID przez menu
 - [ ] Etap 6 — Integracja konfiguracji z Modbusem
@@ -256,7 +256,39 @@ flowchart TD
 
 ## Etap 3 — Enkoder
 
-> *do uzupełnienia*
+Moduł `src/encoder/` obsługuje enkoder obrotowy z przyciskiem przez przerwania (interrupts).
+
+> **Ważne:** Oba piny CLK i DT mają przerwania na `CHANGE` — algorytm sprawdza kombinację obu stanów co eliminuje skoki pozycji. Przycisk ma debouncing 300ms.
+
+```mermaid
+flowchart TD
+    A["inicjalizujEnkoder()"]:::blue --> B["pinMode CLK/DT/SW<br/>INPUT_PULLUP"]:::teal
+    B --> C["ostatniStan = CLK<<1 | DT"]:::teal
+    C --> D["attachInterrupt CLK/DT → CHANGE<br/>attachInterrupt SW → FALLING"]:::teal
+    D --> E["Serial: OK"]:::green
+
+    F["ISR obslugaObrotu()"]:::blue --> G["odczyt CLK i DT<br/>stan = CLK<<1 | DT"]:::teal
+    G --> H{"stan == ostatniStan?"}:::purple
+    H -- tak --> I["return"]:::gray
+    H -- nie --> J{"ostatniStan==01<br/>stan==00?"}:::purple
+    J -- tak --> K["pozycja++"]:::green
+    J -- nie --> L{"ostatniStan==10<br/>stan==00?"}:::purple
+    L -- tak --> M["pozycja--"]:::red
+    L -- nie --> N["ostatniStan = stan"]:::gray
+    K --> N
+    M --> N
+
+    O["ISR obslugaPrzycisku()"]:::blue --> P{"teraz - ostatniCzas<br/>> 300ms?"}:::purple
+    P -- nie --> Q["return"]:::gray
+    P -- tak --> R["przyciskWcisniety = true<br/>ostatniCzas = teraz"]:::green
+
+    classDef blue fill:#E6F1FB,stroke:#185FA5,color:#0C447C
+    classDef purple fill:#EEEDFE,stroke:#534AB7,color:#3C3489
+    classDef green fill:#EAF3DE,stroke:#3B6D11,color:#27500A
+    classDef teal fill:#E1F5EE,stroke:#0F6E56,color:#085041
+    classDef red fill:#FCEBEB,stroke:#A32D2D,color:#791F1F
+    classDef gray fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
+```
 
 ---
 
