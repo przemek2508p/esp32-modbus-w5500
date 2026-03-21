@@ -169,3 +169,79 @@ flowchart TD
     classDef red fill:#FCEBEB,stroke:#A32D2D,color:#791F1F
     classDef gray fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
 ```
+
+# ESP32 + W5500 + OLED + Enkoder — Modbus Tester
+
+Narzędzie do testowania Modbus TCP — tryb Master i Slave, konfiguracja przez enkoder i wyświetlacz OLED.
+
+---
+
+## Podłączenie
+
+### W5500 → ESP32 (VSPI)
+
+| W5500 | ESP32   |
+|-------|---------|
+| MOSI  | GPIO 23 |
+| MISO  | GPIO 19 |
+| SCLK  | GPIO 18 |
+| SCS   | GPIO 5  |
+| 3.3V  | 3.3V    |
+| GND   | GND     |
+
+### OLED SSD1306 → ESP32 (HSPI)
+
+| OLED | ESP32   | Opis |
+|------|---------|------|
+| GND  | GND     | Masa |
+| VCC  | 3.3V    | Zasilanie |
+| D0   | GPIO 14 | Zegar SPI |
+| D1   | GPIO 13 | Dane |
+| RES  | GPIO 26 | Reset |
+| DC   | GPIO 27 | Data/Command |
+| CS   | GPIO 15 | Chip Select |
+
+### Enkoder → ESP32
+
+| Enkoder | ESP32   | Opis |
+|---------|---------|------|
+| CLK     | GPIO 32 | Obrót A |
+| DT      | GPIO 33 | Obrót B |
+| SW      | GPIO 25 | Przycisk |
+| GND     | GND     | Masa |
+| VCC     | 3.3V    | Zasilanie |
+
+
+## Etap 2 — OLED
+
+> *do uzupełnienia*
+
+---
+
+## Etap 3 — Enkoder
+
+> *do uzupełnienia*
+
+---
+
+## Etap 4 — Menu
+
+> *do uzupełnienia*
+
+---
+
+## Etap 5 — Konfiguracja
+
+> *do uzupełnienia*
+
+---
+
+## Etap 6 — Integracja Modbus
+
+> *do uzupełnienia*
+
+---
+
+## Etap 7 — Tryb Slave
+
+> *do uzupełnienia*
