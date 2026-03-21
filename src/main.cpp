@@ -5,7 +5,7 @@
 
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 IPAddress ip(192, 168, 1, 100);
-IPAddress serverIP(192, 168, 0, 1);  // ← IP Twojego PC
+IPAddress serverIP(192, 168, 1, 1);  // ← IP Twojego PC
 
 EthernetClient client;
 ModbusMaster node;
