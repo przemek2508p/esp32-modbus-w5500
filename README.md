@@ -36,40 +36,130 @@ Uczymy się po jednym typie — zaczynamy od **Coils**.
 
 ---
 
-## Diagram działania kodu — Coils
+## Struktura projektu
+
+```
+src/
+├── main.cpp
+├── network/
+│   ├── ethernet.h
+│   └── ethernet.cpp
+├── modbus/
+│   ├── modbus_tcp.h
+│   ├── modbus_tcp.cpp
+│   ├── coils.h
+│   └── coils.cpp
+└── app/
+    ├── app.h
+    └── app.cpp
+```
+
+---
+
+## Diagram — `network/ethernet`
+
+Inicjalizacja W5500 i zarządzanie połączeniem TCP.
 
 ```mermaid
 flowchart TD
-    START([setup]) --> INIT
+    A["inicjalizujEthernet()"]:::blue --> B["Ethernet.init(5)<br/>Ethernet.begin(mac, ip)"]:::blue
+    B --> C{"W5500 OK?"}:::purple
+    C -- nie --> D["return false"]:::red
+    C -- tak --> E["Serial: OK IP<br/>return true"]:::green
 
-    INIT["Ethernet.init(5)<br/>Ethernet.begin(mac, ip)"]:::blue --> W5500
+    F["polacz()"]:::blue --> G{"client.connected?"}:::purple
+    G -- tak --> H["return true"]:::green
+    G -- nie --> I["client.stop()<br/>client.connect(serverIP, 502)"]:::blue
+    I --> J{"połączono?"}:::purple
+    J -- tak --> K["Serial: OK<br/>return true"]:::green
+    J -- nie --> L["Serial: BŁĄD<br/>return false"]:::red
 
-    W5500{W5500 OK?}:::purple
-    W5500 -- nie --> ERR["BŁĄD<br/>while(true)"]:::red
-    W5500 -- tak --> SERIAL
+    classDef blue fill:#E6F1FB,stroke:#185FA5,color:#0C447C
+    classDef purple fill:#EEEDFE,stroke:#534AB7,color:#3C3489
+    classDef green fill:#EAF3DE,stroke:#3B6D11,color:#27500A
+    classDef red fill:#FCEBEB,stroke:#A32D2D,color:#791F1F
+```
 
-    SERIAL["Serial: OK IP<br/>Ethernet.localIP()"]:::green --> LOOP
+---
 
-    LOOP([loop]):::gray --> TIMER
+## Diagram — `modbus/modbus_tcp`
 
-    TIMER{"millis - t<br/>>= 3000ms?"}:::purple
-    TIMER -- nie --> CZEKA["czeka"]:::gray
-    CZEKA --> LOOP
-    TIMER -- tak --> POLACZ
+Budowanie nagłówka MBAP i wysyłanie pakietu TCP.
 
-    POLACZ["polacz()<br/>client.connect(serverIP, 502)"]:::purple --> CONN
+```mermaid
+flowchart TD
+    A["budujNaglowek(req, fc, adres, wartosc)"]:::blue
+    A --> B["transID++"]:::gray
+    B --> C["req[0..1] = transID"]:::gray
+    C --> D["req[2..3] = 0x0000<br/>Protocol ID"]:::gray
+    D --> E["req[4..5] = 0x0006<br/>Length"]:::gray
+    E --> F["req[6] = 0x01<br/>Slave ID"]:::gray
+    F --> G["req[7] = fc<br/>Function Code"]:::gray
+    G --> H["req[8..9] = adres"]:::gray
+    H --> I["req[10..11] = wartosc"]:::gray
 
-    CONN{"connected?"}:::purple
-    CONN -- nie --> RET["return<br/>brak poł."]:::red
-    CONN -- tak --> READ
+    J["wyslijPakiet(req, len)"]:::blue --> K["client.write(req, len)"]:::teal
+    K --> L["delay(100)"]:::gray
 
-    READ["odczytajCoil(0, 1)<br/>FC01 → wyślij pakiet → Serial print"]:::teal --> TOGGLE
+    classDef blue fill:#E6F1FB,stroke:#185FA5,color:#0C447C
+    classDef teal fill:#E1F5EE,stroke:#0F6E56,color:#085041
+    classDef gray fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
+```
 
-    TOGGLE["toggle = !toggle<br/>zmień stan 0→1 lub 1→0"]:::amber --> WRITE
+---
 
-    WRITE["zapiszCoil(0, toggle)<br/>FC05 → wyślij pakiet → Serial print"]:::teal --> RESET
+## Diagram — `modbus/coils`
 
-    RESET["t = millis()<br/>reset timera"]:::gray --> LOOP
+Odczyt (FC01) i zapis (FC05) pojedynczego Coil.
+
+```mermaid
+flowchart TD
+    A["odczytajCoil(adres, ilosc)"]:::blue
+    A --> B["budujNaglowek(req, 0x01, adres, ilosc)"]:::teal
+    B --> C["wyslijPakiet(req, 12)"]:::teal
+    C --> D{"client.available<br/>≥ 10 bajtów?"}:::purple
+    D -- nie --> E["brak odpowiedzi"]:::red
+    D -- tak --> F["client.read(resp, 10)"]:::teal
+    F --> G["wartosc = resp[9] & 0x01"]:::gray
+    G --> H["Serial: FC01 Odczyt"]:::green
+
+    I["zapiszCoil(adres, wartosc)"]:::blue
+    I --> J["budujNaglowek(req, 0x05, adres,<br/>wartosc ? 0xFF00 : 0x0000)"]:::teal
+    J --> K["wyslijPakiet(req, 12)"]:::teal
+    K --> L["Serial: FC05 Zapis"]:::green
+
+    classDef blue fill:#E6F1FB,stroke:#185FA5,color:#0C447C
+    classDef teal fill:#E1F5EE,stroke:#0F6E56,color:#085041
+    classDef purple fill:#EEEDFE,stroke:#534AB7,color:#3C3489
+    classDef green fill:#EAF3DE,stroke:#3B6D11,color:#27500A
+    classDef gray fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
+    classDef red fill:#FCEBEB,stroke:#A32D2D,color:#791F1F
+```
+
+---
+
+## Diagram — `app/app` + `main`
+
+Logika aplikacji i główna pętla.
+
+```mermaid
+flowchart TD
+    START([setup]):::gray --> INIT["inicjalizujEthernet()"]:::blue
+    INIT --> C{"OK?"}:::purple
+    C -- nie --> ERR["while(true)"]:::red
+    C -- tak --> LOOP
+
+    LOOP([loop]):::gray --> TIMER{"millis - t<br/>>= 3000ms?"}:::purple
+    TIMER -- nie --> LOOP
+    TIMER -- tak --> P["polacz()"]:::blue
+    P --> CONN{"connected?"}:::purple
+    CONN -- nie --> LOOP
+    CONN -- tak --> CYK["wykonajCykl()"]:::amber
+    CYK --> READ["odczytajCoil(0, 1)"]:::teal
+    READ --> TOG["toggle = !toggle"]:::gray
+    TOG --> WRITE["zapiszCoil(0, toggle)"]:::teal
+    WRITE --> RESET["t = millis()"]:::gray
+    RESET --> LOOP
 
     classDef blue fill:#E6F1FB,stroke:#185FA5,color:#0C447C
     classDef purple fill:#EEEDFE,stroke:#534AB7,color:#3C3489
