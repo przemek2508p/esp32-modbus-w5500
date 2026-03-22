@@ -12,17 +12,17 @@ bool inicjalizujEthernet() {
   Ethernet.begin(mac, ip);
   delay(2000);
   if (Ethernet.hardwareStatus() == EthernetNoHardware) {
-    Serial.println("[BLAD] W5500 nie znaleziony!");
+    Serial.println("[ETH] W5500 nie znaleziony!");
     return false;
   }
-  Serial.print("[OK] IP: ");
+  Serial.print("[ETH] IP: ");
   Serial.println(Ethernet.localIP());
   return true;
 }
 
 bool polacz() {
   if (client.connected()) return true;
-  client.stop();
+  if (client) client.stop();  // ← stop tylko gdy był połączony
   delay(100);
   if (client.connect(serverIP, 502)) {
     Serial.println("[OK] Polaczono");

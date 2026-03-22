@@ -1,54 +1,43 @@
 #include "display.h"
-#include <Adafruit_GFX.h>
+#include <Wire.h>
 #include <Arduino.h>
-#include <SPI.h>
 
-#define OLED_CLK  14
-#define OLED_MOSI 13
-#define OLED_RES  26
-#define OLED_DC   27
-#define OLED_CS   15
-
-Adafruit_SSD1306 display(128, 64, OLED_MOSI, OLED_CLK, OLED_DC, OLED_RES, OLED_CS);
+// 1602A — 16 kolumn, 2 wiersze, adres I2C 0x27
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 bool inicjalizujDisplay() {
-  if (!display.begin(SSD1306_SWITCHCAPVCC)) {
-    Serial.println("[BLAD] OLED nie znaleziony!");
-    return false;
-  }
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-  Serial.println("[OK] OLED gotowy");
+  Wire.begin(21, 22);  // SDA=21, SCL=22
+  lcd.init();
+  lcd.backlight();
+  Serial.println("[OK] LCD gotowy");
   return true;
 }
 
 void pokazTekst(const char* linia1, const char* linia2) {
-  display.clearDisplay();
-  display.setCursor(0, 0);
-  display.println(linia1);
-  if (linia2) display.println(linia2);
-  display.display();
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(linia1);
+  if (linia2) {
+    lcd.setCursor(0, 1);
+    lcd.print(linia2);
+  }
 }
 
 void pokazMenu(const PozycjaMenu* pozycje, uint8_t rozmiar, uint8_t kursor) {
-  display.clearDisplay();
-  for (uint8_t i = 0; i < rozmiar; i++) {
-    if (i == kursor) {
-      display.fillRect(0, i * 10, 128, 10, SSD1306_WHITE);
-      display.setTextColor(SSD1306_BLACK);
-    } else {
-      display.setTextColor(SSD1306_WHITE);
-    }
-    display.setCursor(4, i * 10 + 1);
-    display.print(pozycje[i].nazwa);
-    if (!pozycje[i].dostepna) display.print(" ...");
+  lcd.clear();
+  // LCD 1602 ma tylko 2 wiersze — pokazuj aktualną i następną pozycję
+  for (uint8_t i = 0; i < 2 && i < rozmiar; i++) {
+    uint8_t idx = (kursor + i) % rozmiar;
+    lcd.setCursor(0, i);
+    if (i == 0) lcd.print("> ");
+    else        lcd.print("  ");
+    lcd.print(pozycje[idx].nazwa);
+    if (!pozycje[idx].dostepna) lcd.print("..");
   }
-  display.display();
 }
 
 void pokazEdycje(StanEdycji& edycja, KonfiguracjaMaster& master) {
-  char buf[32];
+  char buf[17];
   if (edycja.tryb == TrybEdycji::IP) {
     formatujIP(buf, master.ip, edycja.oktet);
     pokazTekst("IP serwera:", buf);
@@ -68,4 +57,12 @@ void pokazEdycje(StanEdycji& edycja, KonfiguracjaMaster& master) {
     formatujWartosc(buf, master.wartosc);
     pokazTekst("Wartosc:", buf);
   }
+}
+
+void wstrzymajDisplay() {
+  // I2C — nic nie trzeba robić, nie koliduje z SPI
+}
+
+void wznowDisplay() {
+  // I2C — nic nie trzeba robić
 }

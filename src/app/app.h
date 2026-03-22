@@ -1,3 +1,6 @@
 #pragma once
+#include "../menu/menu.h"
 
-void wykonajCykl();
+// Wyślij pakiet Modbus na podstawie konfiguracji z menu
+// Zwraca true jeśli wysłano i odebrano odpowiedź
+bool wyslijPakietModbus(KonfiguracjaMaster& cfg);

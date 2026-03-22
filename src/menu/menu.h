@@ -23,7 +23,8 @@ enum class WynikMenu {
   BRAK,
   NAWIGACJA,
   WEJSCIE_EDYCJA,
-  WEJSCIE_PODMENU
+  WEJSCIE_PODMENU,
+  WYSLIJ
 };
 
 struct PozycjaMenu {

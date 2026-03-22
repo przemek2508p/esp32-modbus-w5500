@@ -61,9 +61,11 @@ WynikMenu aktualizujMenu(int delta, bool przycisk) {
   if (przycisk) {
     const PozycjaMenu& wybrana = pozycje[stan.kursor];
     if (wybrana.dostepna) {
-      if (wybrana.edycja != TrybEdycji::BRAK) {
-        wejdzWEdycje(wybrana.edycja);
-        return WynikMenu::WEJSCIE_EDYCJA;
+    if (wybrana.edycja != TrybEdycji::BRAK) {
+      wejdzWEdycje(wybrana.edycja);
+      return WynikMenu::WEJSCIE_EDYCJA;
+      } else if (strcmp(wybrana.nazwa, "Wyslij") == 0) {
+        return WynikMenu::WYSLIJ;  // ← nie zmieniaj menu, tylko zwróć sygnał
       } else {
         stan.aktywne = wybrana.cel;
         stan.kursor  = 0;
