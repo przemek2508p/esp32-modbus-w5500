@@ -171,15 +171,15 @@ flowchart TD
 ```
 
 # ESP32 + W5500 + OLED + Enkoder — Modbus Tester
- 
+
 Narzędzie do testowania Modbus TCP — tryb Master i Slave, konfiguracja przez enkoder i wyświetlacz OLED.
- 
+
 ---
- 
+
 ## Podłączenie
- 
+
 ### W5500 → ESP32 (VSPI)
- 
+
 | W5500 | ESP32   |
 |-------|---------|
 | MOSI  | GPIO 23 |
@@ -188,9 +188,9 @@ Narzędzie do testowania Modbus TCP — tryb Master i Slave, konfiguracja przez 
 | SCS   | GPIO 5  |
 | 3.3V  | 3.3V    |
 | GND   | GND     |
- 
+
 ### OLED SSD1306 → ESP32 (HSPI)
- 
+
 | OLED | ESP32   | Opis |
 |------|---------|------|
 | GND  | GND     | Masa |
@@ -200,9 +200,9 @@ Narzędzie do testowania Modbus TCP — tryb Master i Slave, konfiguracja przez 
 | RES  | GPIO 26 | Reset |
 | DC   | GPIO 27 | Data/Command |
 | CS   | GPIO 15 | Chip Select |
- 
+
 ### Enkoder → ESP32
- 
+
 | Enkoder | ESP32   | Opis |
 |---------|---------|------|
 | CLK     | GPIO 32 | Obrót A |
@@ -210,74 +210,80 @@ Narzędzie do testowania Modbus TCP — tryb Master i Slave, konfiguracja przez 
 | SW      | GPIO 25 | Przycisk |
 | +       | 3.3V    | Zasilanie |
 | GND     | GND     | Masa |
- 
+
 ---
- 
+
 ## Typy rejestrów Modbus
- 
+
 | Typ | Adres | Dostęp | Co trzyma? | Przykład |
 |-----|-------|--------|------------|---------|
 | **Coils** | 0x 00001+ | Odczyt + Zapis | Bit (0/1) | LED, przekaźnik |
 | Discrete Inputs | 1x 10001+ | Tylko odczyt | Bit (0/1) | Przycisk, czujnik |
 | Input Registers | 3x 30001+ | Tylko odczyt | Liczba 16-bit | Temperatura, ADC |
 | Holding Registers | 4x 40001+ | Odczyt + Zapis | Liczba 16-bit | Setpoint, parametry |
- 
+
 ---
- 
+
 ## Plan etapów
- 
+
 - [x] Etap 1 — Modbus TCP Client, obsługa Coils
 - [x] Etap 2 — OLED hello world
 - [x] Etap 3 — Enkoder, odczyt obrotów i przycisku
 - [x] Etap 4 — Menu nawigacja OLED + enkoder
-- [ ] Etap 5 — Konfiguracja IP, Port, Slave ID przez menu
+- [x] Etap 5 — Konfiguracja IP, Port, Slave ID przez menu
 - [ ] Etap 6 — Integracja konfiguracji z Modbusem
 - [ ] Etap 7 — Tryb Slave
- 
+
 ---
- 
+
 ## Etap 2 — OLED
- 
+
 Moduł `src/display/` obsługuje wyświetlacz SSD1306 przez SPI (HSPI).
- 
+
 > **Ważne:** OLED musi być inicjalizowany przed Ethernetem (W5500) — oba używają SPI i W5500 blokuje magistralę jeśli wystartuje pierwszy.
- 
+
 ```mermaid
 flowchart TD
     A["inicjalizujDisplay()"]:::blue --> B{"display.begin<br/>SSD1306_SWITCHCAPVCC"}:::purple
     B -- nie --> C["Serial: BLAD<br/>return false"]:::red
     B -- tak --> D["clearDisplay()<br/>setTextSize(1)<br/>setTextColor(WHITE)"]:::teal
     D --> E["Serial: OK<br/>return true"]:::green
- 
+
     F["pokazTekst(linia1, linia2)"]:::blue --> G["clearDisplay()"]:::teal
     G --> H["setCursor(0,0)<br/>println(linia1)"]:::teal
     H --> I{"linia2?"}:::purple
     I -- tak --> J["println(linia2)"]:::teal
     I -- nie --> K["display()"]:::teal
     J --> K
- 
+
+    L["pokazEdycje(edycja, master)"]:::blue --> M{"edycja.tryb?"}:::purple
+    M -- IP --> N["formatujIP()<br/>pokazTekst IP serwera"]:::teal
+    M -- PORT --> O["formatujWartosc()<br/>pokazTekst Port"]:::teal
+    M -- SLAVE_ID --> P["formatujWartosc()<br/>pokazTekst Slave ID"]:::teal
+    M -- FC/ADRES/WARTOSC --> Q["formatujWartosc()<br/>pokazTekst odpowiedni"]:::teal
+
     classDef blue fill:#E6F1FB,stroke:#185FA5,color:#0C447C
     classDef purple fill:#EEEDFE,stroke:#534AB7,color:#3C3489
     classDef green fill:#EAF3DE,stroke:#3B6D11,color:#27500A
     classDef teal fill:#E1F5EE,stroke:#0F6E56,color:#085041
     classDef red fill:#FCEBEB,stroke:#A32D2D,color:#791F1F
 ```
- 
+
 ---
- 
+
 ## Etap 3 — Enkoder
- 
+
 Moduł `src/encoder/` obsługuje enkoder obrotowy z przyciskiem przez przerwania (interrupts).
- 
+
 > **Ważne:** Oba piny CLK i DT mają przerwania na `CHANGE` — algorytm sprawdza kombinację obu stanów co eliminuje skoki pozycji. Przycisk ma debouncing 300ms.
- 
+
 ```mermaid
 flowchart TD
     A["inicjalizujEnkoder()"]:::blue --> B["pinMode CLK/DT/SW<br/>INPUT_PULLUP"]:::teal
     B --> C["ostatniStan = CLK<<1 | DT"]:::teal
     C --> D["attachInterrupt CLK/DT → CHANGE<br/>attachInterrupt SW → FALLING"]:::teal
     D --> E["Serial: OK"]:::green
- 
+
     F["ISR obslugaObrotu()"]:::blue --> G["odczyt CLK i DT<br/>stan = CLK<<1 | DT"]:::teal
     G --> H{"stan == ostatniStan?"}:::purple
     H -- tak --> I["return"]:::gray
@@ -288,11 +294,11 @@ flowchart TD
     L -- nie --> N["ostatniStan = stan"]:::gray
     K --> N
     M --> N
- 
+
     O["ISR obslugaPrzycisku()"]:::blue --> P{"teraz - ostatniCzas<br/>> 300ms?"}:::purple
     P -- nie --> Q["return"]:::gray
     P -- tak --> R["przyciskWcisniety = true<br/>ostatniCzas = teraz"]:::green
- 
+
     classDef blue fill:#E6F1FB,stroke:#185FA5,color:#0C447C
     classDef purple fill:#EEEDFE,stroke:#534AB7,color:#3C3489
     classDef green fill:#EAF3DE,stroke:#3B6D11,color:#27500A
@@ -300,26 +306,28 @@ flowchart TD
     classDef red fill:#FCEBEB,stroke:#A32D2D,color:#791F1F
     classDef gray fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
 ```
- 
+
 ---
- 
+
 ## Etap 4 — Menu
- 
+
 Moduł `src/menu/` obsługuje nawigację — obrót góra/dół, przycisk = wejdź/zatwierdź.
- 
+
 Na start zaimplementowana tylko ścieżka **Master → Coils**. Slave widoczny w menu ale oznaczony jako `wkrótce`.
- 
+
 ### Typy danych (`menu.h`)
- 
+
 | Typ | Opis |
 |-----|------|
-| `TypMenu` | Enum — identyfikator aktywnego podmenu (`GLOWNE`, `MASTER_POLACZENIE`, `MASTER_PAKIET`, `SLAVE`) |
-| `PozycjaMenu` | Jeden wiersz na OLEDzie — nazwa, cel nawigacji, dostępność |
-| `KonfiguracjaMaster` | Parametry połączenia: IP, Port, Slave ID, FC, adres, wartość |
-| `StanMenu` | Aktualny stan całego menu — aktywne podmenu, pozycja kursora, konfiguracja |
- 
+| `TypMenu` | Enum — identyfikator aktywnego podmenu |
+| `TrybEdycji` | Enum — który parametr jest edytowany |
+| `WynikMenu` | Enum — wynik aktualizacji menu (nawigacja / edycja / podmenu) |
+| `PozycjaMenu` | Jeden wiersz na OLEDzie — nazwa, cel, dostępność, tryb edycji |
+| `KonfiguracjaMaster` | Parametry: IP, Port, Slave ID, FC, adres, wartość |
+| `StanMenu` | Aktualny stan — aktywne podmenu, kursor, konfiguracja |
+
 ### Struktura menu
- 
+
 ```
 [Główne menu]
 ├── Master
@@ -333,68 +341,140 @@ Na start zaimplementowana tylko ścieżka **Master → Coils**. Slave widoczny w
 │       ├── Wartość
 │       └── Wyślij
 └── Slave                        ← wkrótce
-    ├── Połączenie
-    │   ├── IP własne
-    │   ├── Port
-    │   └── Slave ID
-    └── Rejestry
-        ├── Coils
-        ├── Discrete Inputs
-        ├── Input Registers
-        └── Holding Registers
 ```
- 
+
 ### Sterowanie
- 
+
 | Akcja | Efekt |
 |-------|-------|
 | Obrót w prawo | Następna pozycja |
 | Obrót w lewo | Poprzednia pozycja |
 | Przycisk | Wejdź głębiej / zatwierdź |
-| Ostatnia pozycja + obrót w lewo | Wstecz |
- 
+
 ### Diagram — nawigacja (`menu.cpp`)
- 
+
 ```mermaid
 flowchart TD
-    A["inicjalizujMenu()"]:::blue --> B["aktywne = GLOWNE<br/>kursor = 0"]:::teal
- 
-    C["aktualizujMenu(delta, przycisk)"]:::blue --> D["aktualnePositcje()<br/>pobierz tablicę i rozmiar"]:::teal
-    D --> E{"delta != 0?"}:::purple
-    E -- tak --> F["kursor += delta<br/>ogranicz 0..rozmiar-1"]:::teal
-    E -- nie --> G{"przycisk?"}:::purple
-    F --> G
-    G -- nie --> H["return"]:::gray
-    G -- tak --> I{"pozycja.dostepna?"}:::purple
-    I -- nie --> H
-    I -- tak --> J["aktywne = pozycja.cel<br/>kursor = 0"]:::green
- 
-    K["aktualnePositcje(rozmiar)"]:::blue --> L{"stan.aktywne?"}:::purple
-    L -- MASTER_POLACZENIE --> M["return menuMasterPolaczenie"]:::teal
-    L -- MASTER_PAKIET --> N["return menuMasterPakiet"]:::teal
-    L -- default --> O["return menuGlowne"]:::teal
- 
+    A["aktualizujMenu(delta, przycisk)"]:::blue --> B["aktualnePositcje()"]:::teal
+    B --> C{"delta != 0?"}:::purple
+    C -- tak --> D["kursor += delta<br/>ogranicz 0..rozmiar-1"]:::teal
+    D --> E["return NAWIGACJA"]:::green
+    C -- nie --> F{"przycisk?"}:::purple
+    F -- nie --> G["return BRAK"]:::gray
+    F -- tak --> H{"pozycja.dostepna?"}:::purple
+    H -- nie --> G
+    H -- tak --> I{"edycja != BRAK?"}:::purple
+    I -- tak --> J["wejdzWEdycje()<br/>return WEJSCIE_EDYCJA"]:::amber
+    I -- nie --> K["aktywne = cel<br/>kursor = 0<br/>return WEJSCIE_PODMENU"]:::green
+
+    classDef blue fill:#E6F1FB,stroke:#185FA5,color:#0C447C
+    classDef purple fill:#EEEDFE,stroke:#534AB7,color:#3C3489
+    classDef green fill:#EAF3DE,stroke:#3B6D11,color:#27500A
+    classDef teal fill:#E1F5EE,stroke:#0F6E56,color:#085041
+    classDef amber fill:#FAEEDA,stroke:#854F0B,color:#633806
+    classDef gray fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
+```
+
+---
+
+## Etap 5 — Konfiguracja
+
+Moduł `src/config/` obsługuje edycję wartości przez enkoder i formatowanie ich na OLEDzie.
+
+### Typy danych (`config.h`)
+
+| Typ | Opis |
+|-----|------|
+| `StanEdycji` | Aktualny tryb edycji, aktywny oktet IP, flaga czy edycja aktywna |
+
+### Sterowanie podczas edycji
+
+| Akcja | Efekt |
+|-------|-------|
+| Obrót | Zmień wartość (+1 / -1) |
+| Przycisk | Zatwierdź i przejdź dalej (IP: następny oktet) |
+
+### Diagram — edycja wartości (`config.cpp`)
+
+```mermaid
+flowchart TD
+    A["aktualizujEdycje(delta, przycisk, cfg)"]:::blue --> B{"stanEdycji.tryb?"}:::purple
+
+    B -- IP --> C{"delta != 0?"}:::purple
+    C -- tak --> D["cfg.ip[oktet] += delta<br/>ogranicz 0-255"]:::teal
+    C -- nie --> E{"przycisk?"}:::purple
+    D --> E
+    E -- nie --> F["return false"]:::gray
+    E -- tak --> G["oktet++"]:::teal
+    G --> H{"oktet > 3?"}:::purple
+    H -- nie --> F
+    H -- tak --> I["aktywna = false<br/>return true"]:::green
+
+    B -- PORT --> J{"delta != 0?"}:::purple
+    J -- tak --> K["cfg.port += delta<br/>ogranicz 1-65535"]:::teal
+    J -- nie --> L{"przycisk?"}:::purple
+    K --> L
+    L -- tak --> I
+    L -- nie --> F
+
+    B -- SLAVE_ID --> M["cfg.slaveID += delta<br/>ogranicz 1-247<br/>przycisk → return true"]:::teal
+    B -- FC --> N["cfg.fc += delta<br/>ogranicz 1-6<br/>przycisk → return true"]:::teal
+    B -- ADRES/WARTOSC --> O["cfg.adres/wartosc += delta<br/>ogranicz 0-65535<br/>przycisk → return true"]:::teal
+
+    M --> F
+    N --> F
+    O --> F
+
     classDef blue fill:#E6F1FB,stroke:#185FA5,color:#0C447C
     classDef purple fill:#EEEDFE,stroke:#534AB7,color:#3C3489
     classDef green fill:#EAF3DE,stroke:#3B6D11,color:#27500A
     classDef teal fill:#E1F5EE,stroke:#0F6E56,color:#085041
     classDef gray fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
 ```
- 
+
+### Diagram — główna pętla (`main.cpp`)
+
+```mermaid
+flowchart TD
+    START([setup]):::gray --> A["inicjalizujDisplay()<br/>inicjalizujEnkoder()<br/>inicjalizujMenu()<br/>inicjalizujKonfigurator()"]:::blue
+    A --> B["pokazTekst Modbus Tester"]:::teal
+    B --> C["pokazMenu — ekran startowy"]:::teal
+    C --> LOOP([loop]):::gray
+
+    LOOP --> D["pobierzPozycje()<br/>oblicz delta"]:::teal
+    D --> E["pobierzPrzycisk()"]:::teal
+    E --> F{"delta != 0<br/>lub przycisk?"}:::purple
+    F -- nie --> LOOP
+    F -- tak --> G{"edycja.aktywna?"}:::purple
+
+    G -- tak --> H["aktualizujEdycje()"]:::amber
+    H --> I{"zakonczona?"}:::purple
+    I -- tak --> J["pokazMenu()"]:::teal
+    I -- nie --> K["pokazEdycje()"]:::teal
+    J --> LOOP
+    K --> LOOP
+
+    G -- nie --> L["aktualizujMenu()"]:::blue
+    L --> M{"wynik?"}:::purple
+    M -- WEJSCIE_EDYCJA --> K
+    M -- inne --> J
+
+    classDef blue fill:#E6F1FB,stroke:#185FA5,color:#0C447C
+    classDef purple fill:#EEEDFE,stroke:#534AB7,color:#3C3489
+    classDef green fill:#EAF3DE,stroke:#3B6D11,color:#27500A
+    classDef teal fill:#E1F5EE,stroke:#0F6E56,color:#085041
+    classDef amber fill:#FAEEDA,stroke:#854F0B,color:#633806
+    classDef gray fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
+```
+
 ---
- 
-## Etap 5 — Konfiguracja
- 
-> *do uzupełnienia*
- 
----
- 
+
 ## Etap 6 — Integracja Modbus
- 
+
 > *do uzupełnienia*
- 
+
 ---
- 
+
 ## Etap 7 — Tryb Slave
- 
+
 > *do uzupełnienia*
