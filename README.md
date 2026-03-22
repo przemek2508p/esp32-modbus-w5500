@@ -229,7 +229,7 @@ Narzędzie do testowania Modbus TCP — tryb Master i Slave, konfiguracja przez 
 - [x] Etap 1 — Modbus TCP Client, obsługa Coils
 - [x] Etap 2 — OLED hello world
 - [x] Etap 3 — Enkoder, odczyt obrotów i przycisku
-- [ ] Etap 4 — Menu nawigacja OLED + enkoder
+- [x] Etap 4 — Menu nawigacja OLED + enkoder
 - [ ] Etap 5 — Konfiguracja IP, Port, Slave ID przez menu
 - [ ] Etap 6 — Integracja konfiguracji z Modbusem
 - [ ] Etap 7 — Tryb Slave
@@ -305,9 +305,9 @@ flowchart TD
 
 ## Etap 4 — Menu
 
-Nawigacja przez enkoder — obrót góra/dół, przycisk = wejdź/zatwierdź.
+Moduł `src/menu/` obsługuje nawigację — obrót góra/dół, przycisk = wejdź/zatwierdź.
 
-Na start zaimplementowane tylko ścieżka **Master → Coils**. Pozostałe opcje widoczne w menu ale oznaczone jako `wkrotce`.
+Na start zaimplementowana tylko ścieżka **Master → Coils**. Slave widoczny w menu ale oznaczony jako `wkrótce`.
 
 ### Struktura menu
 
@@ -344,7 +344,26 @@ Na start zaimplementowane tylko ścieżka **Master → Coils**. Pozostałe opcje
 | Przycisk | Wejdź głębiej / zatwierdź |
 | Ostatnia pozycja + obrót w lewo | Wstecz |
 
-> *Kod — do uzupełnienia*
+```mermaid
+flowchart TD
+    A["inicjalizujMenu()"]:::blue --> B["aktywne = GLOWNE<br/>kursor = 0"]:::teal
+
+    C["aktualizujMenu(delta, przycisk)"]:::blue --> D["aktualnePositcje()"]:::teal
+    D --> E{"delta != 0?"}:::purple
+    E -- tak --> F["kursor += delta<br/>ogranicz 0..rozmiar-1"]:::teal
+    E -- nie --> G{"przycisk?"}:::purple
+    F --> G
+    G -- nie --> H["return"]:::gray
+    G -- tak --> I{"pozycja dostepna?"}:::purple
+    I -- nie --> H
+    I -- tak --> J["aktywne = cel<br/>kursor = 0"]:::green
+
+    classDef blue fill:#E6F1FB,stroke:#185FA5,color:#0C447C
+    classDef purple fill:#EEEDFE,stroke:#534AB7,color:#3C3489
+    classDef green fill:#EAF3DE,stroke:#3B6D11,color:#27500A
+    classDef teal fill:#E1F5EE,stroke:#0F6E56,color:#085041
+    classDef gray fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
+```
 
 ---
 
