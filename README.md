@@ -257,3 +257,9 @@ flowchart TD
 ## Etap 7 — Tryb Slave
 
 > *do uzupełnienia*
+
+### Znane problemy do rozwiązania
+
+1. **Edycja IP na LCD 1602A** — wprowadzanie adresu IP przez enkoder nie działa poprawnie na nowym wyświetlaczu. Do zbadania i naprawy.
+
+2. **Przyczyna problemu z SPI** — możliwe że OLED SPI nie był przyczyną braku połączenia. Problem mógł leżeć po stronie Modbus Slave który był skonfigurowany na `Any Address` zamiast konkretnego IP `192.168.1.1`. Do weryfikacji czy stary OLED SSD1306 działa poprawnie po ustawieniu stałego IP w Modbus Slave.
