@@ -213,6 +213,17 @@ Narzędzie do testowania Modbus TCP — tryb Master i Slave, konfiguracja przez 
 
 ---
 
+## Typy rejestrów Modbus
+
+| Typ | Adres | Dostęp | Co trzyma? | Przykład |
+|-----|-------|--------|------------|---------|
+| **Coils** | 0x 00001+ | Odczyt + Zapis | Bit (0/1) | LED, przekaźnik |
+| Discrete Inputs | 1x 10001+ | Tylko odczyt | Bit (0/1) | Przycisk, czujnik |
+| Input Registers | 3x 30001+ | Tylko odczyt | Liczba 16-bit | Temperatura, ADC |
+| Holding Registers | 4x 40001+ | Odczyt + Zapis | Liczba 16-bit | Setpoint, parametry |
+
+---
+
 ## Plan etapów
 
 - [x] Etap 1 — Modbus TCP Client, obsługa Coils
@@ -294,7 +305,46 @@ flowchart TD
 
 ## Etap 4 — Menu
 
-> *do uzupełnienia*
+Nawigacja przez enkoder — obrót góra/dół, przycisk = wejdź/zatwierdź.
+
+Na start zaimplementowane tylko ścieżka **Master → Coils**. Pozostałe opcje widoczne w menu ale oznaczone jako `wkrotce`.
+
+### Struktura menu
+
+```
+[Główne menu]
+├── Master
+│   ├── Połączenie
+│   │   ├── IP serwera
+│   │   ├── Port
+│   │   └── Slave ID
+│   └── Pakiet
+│       ├── Function Code
+│       ├── Adres rejestru
+│       ├── Wartość
+│       └── Wyślij
+└── Slave                        ← wkrótce
+    ├── Połączenie
+    │   ├── IP własne
+    │   ├── Port
+    │   └── Slave ID
+    └── Rejestry
+        ├── Coils
+        ├── Discrete Inputs
+        ├── Input Registers
+        └── Holding Registers
+```
+
+### Sterowanie
+
+| Akcja | Efekt |
+|-------|-------|
+| Obrót w prawo | Następna pozycja |
+| Obrót w lewo | Poprzednia pozycja |
+| Przycisk | Wejdź głębiej / zatwierdź |
+| Ostatnia pozycja + obrót w lewo | Wstecz |
+
+> *Kod — do uzupełnienia*
 
 ---
 
