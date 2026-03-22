@@ -2,7 +2,6 @@
 #include <Adafruit_GFX.h>
 #include <Arduino.h>
 #include <SPI.h>
-#include "../menu/menu.h" 
 
 #define OLED_CLK  14
 #define OLED_MOSI 13
@@ -34,24 +33,39 @@ void pokazTekst(const char* linia1, const char* linia2) {
 
 void pokazMenu(const PozycjaMenu* pozycje, uint8_t rozmiar, uint8_t kursor) {
   display.clearDisplay();
-
   for (uint8_t i = 0; i < rozmiar; i++) {
-    // podświetl aktualną pozycję
     if (i == kursor) {
       display.fillRect(0, i * 10, 128, 10, SSD1306_WHITE);
-      display.setTextColor(SSD1306_BLACK); // tekst czarny na białym tle
+      display.setTextColor(SSD1306_BLACK);
     } else {
       display.setTextColor(SSD1306_WHITE);
     }
-
     display.setCursor(4, i * 10 + 1);
     display.print(pozycje[i].nazwa);
-
-    // oznacz zablokowane pozycje
-    if (!pozycje[i].dostepna) {
-      display.print(" ...");
-    }
+    if (!pozycje[i].dostepna) display.print(" ...");
   }
-
   display.display();
+}
+
+void pokazEdycje(StanEdycji& edycja, KonfiguracjaMaster& master) {
+  char buf[32];
+  if (edycja.tryb == TrybEdycji::IP) {
+    formatujIP(buf, master.ip, edycja.oktet);
+    pokazTekst("IP serwera:", buf);
+  } else if (edycja.tryb == TrybEdycji::PORT) {
+    formatujWartosc(buf, master.port);
+    pokazTekst("Port:", buf);
+  } else if (edycja.tryb == TrybEdycji::SLAVE_ID) {
+    formatujWartosc(buf, master.slaveID);
+    pokazTekst("Slave ID:", buf);
+  } else if (edycja.tryb == TrybEdycji::FC) {
+    formatujWartosc(buf, master.fc);
+    pokazTekst("Func Code:", buf);
+  } else if (edycja.tryb == TrybEdycji::ADRES) {
+    formatujWartosc(buf, master.adres);
+    pokazTekst("Adres:", buf);
+  } else if (edycja.tryb == TrybEdycji::WARTOSC) {
+    formatujWartosc(buf, master.wartosc);
+    pokazTekst("Wartosc:", buf);
+  }
 }
